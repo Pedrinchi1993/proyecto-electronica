@@ -1,0 +1,15 @@
+[Unit]
+Description=Servicio de Muestreo de Gas MQ-2
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/java -cp /home/pi/simulador-sensor/src App
+WorkingDirectory=/home/pi/simulador-sensor
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target
