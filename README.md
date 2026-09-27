@@ -1,159 +1,92 @@
-# Sistema de Adquisición y Simulación de Sensor Químico MOS (MQ-2)
-> **Asignatura:** Sistemas Digitales III  
-> **Plataforma Objetivo:** Raspberry Pi (Raspbian / Raspberry Pi OS)  
-> **Lenguaje de Programación:** Java (JDK 11+)  
+# Sistema de Monitoreo y Simulación de Sensor MQ-2 (Gas/Humo)
+**Asignatura:** Sistemas Digitales III  
+**Lenguaje de Desarrollo:** Java  
+**Plataforma de Despliegue:** Raspberry Pi / Linux  
 
 ---
 
-## 1. Descripción del Proyecto
+## 1. Ficha Técnica del Sensor (Fase 1)
 
-Este proyecto implementa una aplicación completa para la adquisición, registro y visualización en tiempo real de datos provenientes de un **sensor de gas/humo de la serie MQ (MQ-2)**. 
-
-Siguiendo la metodología de cinco fases exigida en el curso, el proyecto desacopla completamente la lógica de adquisición y procesamiento de datos del hardware físico mediante una **clase simulada fiel al comportamiento físico-químico del sensor**. De esta manera, el sistema funciona de forma autónoma y queda listo para recibir el hardware real sin necesidad de reescribir el código base.
-
----
-
-## 2. Ficha Técnica del Sensor (Fase 1)
-
-* **Sensor:** MQ-2 (LPG, i-butano, propano, metano, alcohol, humo).
-* **Grupo de Simulación:** Químico MOS (Óxido Metálico Semiconductor).
-* **Magnitud Medida:** Concentración de gas en partes por millón (**PPM**).
-* **Voltaje de Operación:** 5.0 V DC.
-* **Interfaz Análoga:** Tensión de salida proporcional a la concentración.
-* **Requerimiento de Hardware en Raspberry Pi:** Requiere un conversor analógico-digital (ADC) externo como el **MCP3008** con comunicación vía bus SPI, dado que la Raspberry Pi no posee entradas analógicas nativas.
-* **Comportamiento Físico Característico:**
-  1. **Precalentamiento:** Requiere tiempo de estabilización térmica antes de entregar lecturas válidas.
-  2. **Deriva Lenta:** Variación continua y gradual del valor base por efecto de la temperatura ambiente y envejecimiento.
-  3. **Ruido Gaussiano:** Fluctuaciones estadísticas en la medición.
+* **Sensor Asignado:** MQ-2 (Detector de humo y gases combustibles)
+* **Grupo de Simulación:** Químico MOS (Óxido Metálico Semiconductor)
+* **Magnitud Medida:** Concentración de gas/humo en Partes Por Millón (PPM)
+* **Tensión de Alimentación:** 5V DC
+* **Tipo de Salida:** Analógica (0V - 5V) continua
+* **Requiere ADC:** Sí (MCP3008 mediante interfaz SPI en Raspberry Pi)
+* **Comportamiento Característico:** 
+  * Periodo de precalentamiento inicial obligatorio.
+  * Deriva lenta del valor base por cambios de temperatura y humedad ambiental.
 
 ---
 
-## 3. Arquitectura del Software (Separación de Capas)
+## 2. Requisitos y Arquitectura del Programa (Fase 2)
 
-El proyecto está diseñado bajo principios de programación orientada a objetos (POO) garantizando el aislamiento del hardware:
-
-```text
-src/
-├── Sensor.java              # Interfaz genérica del hardware (Capa de Abstracción)
-├── QuimicoSimulado.java     # Modelo matemático que simula el sensor MQ-2
-├── GraficaSensor.java       # Interfaz gráfica en Java Swing con ventana acotada
-├── App.java                 # Módulo principal y gestor de hilos de ejecución
-└── PruebasSensor.java       # Pruebas unitarias y de robustez
-```
+El desarrollo cumple estrictamente con la **separación de capas**:
+* **Sensor.java**: Interfaz común que aísla la lógica del hardware.
+* **QuimicoSimulado.java**: Clase que simula el modelo matemático del grupo Químico MOS (precalentamiento, deriva lenta y ruido gaussiano).
+* **App.java**: Módulo principal de la aplicación que gestiona la interfaz gráfica (Swing), el guardado en CSV con ventana acotada de datos y la tolerancia a fallos.
+* **PruebasSensor.java**: Suite de pruebas automatizadas para validar la robustez.
 
 ---
 
-## 4. Esquema de Conexión Física (Raspberry Pi + MCP3008 + MQ-2)
+## 3. Esquema de Conexión en Raspberry Pi
+![Esquema de Conexión Proteus](esquema_proteus.png)
 
-Aun cuando el sistema opera en modo simulado, se define la topología de conexión para el despliegue con hardware real:
+Debido a que la Raspberry Pi no cuenta con entradas analógicas nativas, se requiere un conversor analógico-digital (ADC) **MCP3008**:
 
-```text
-  +-----------------------+              +-----------------------+
-  |  Raspberry Pi 3 / 4   |              |   ADC MCP3008 (SPI)   |
-  |                       |              |                       |
-  | Pin 1  (3.3V) --------+--------------+ VDD, VREF             |
-  | Pin 6  (GND) ---------+--------------+ AGND, DGND            |
-  | Pin 19 (MOSI) --------+--------------+ DIN                   |
-  | Pin 21 (MISO) --------+--------------+ DOUT                  |
-  | Pin 23 (SCLK) --------+--------------+ CLK                   |
-  | Pin 24 (CE0) ---------+--------------+ CS/SHDN               |
-  +-----------------------+              |                       |
-                                         | CH0 <---+             |
-                                         +---------|-------------+
-                                                   |
-                                         +---------|-------------+
-                                         |  Sensor MQ-2 (Real)   |
-                                         |                       |
-                                         | VCC -----> 5V         |
-                                         | GND -----> GND        |
-                                         | AOUT ----> CH0 (MCP)  |
-                                         +-----------------------+
-```
 
 ---
 
-## 5. Instrucciones de Compilación y Ejecución
+## 4. Formato de Registro de Datos (CSV)
 
-### Requisitos Previos
-* Tener instalado el JDK (Java Development Kit) 11 o superior.
-* Verificable en la terminal mediante: `java -version` y `javac -version`.
+El muestreo guarda los datos cada 1 segundo en el archivo `registro_mq2.csv` utilizando una estampa de tiempo legible (`yyyy-MM-dd HH:mm:ss`):
 
-### Compilación desde la Terminal
-Ubícate en la raíz del proyecto y ejecuta:
 
-```bash
-javac -d bin src/*.java
-```
-
-### Ejecución de la Aplicación
-Para iniciar el sistema de muestreo, registro en CSV y gráfica Swing:
-
-```bash
-java -cp bin App
-```
-
-### Ejecución de las Pruebas Unitarias
-Para ejecutar la batería de pruebas automatizadas:
-
-```bash
-java -cp bin PruebasSensor
-```
 
 ---
 
-## 6. Despliegue como Servicio del Sistema (`systemd`)
+## 5. Instrucciones de Compilación y Ejecución (Fase 3 y 4)
 
-Para garantizar que la aplicación arranque de manera automática al encender la Raspberry Pi y se reinicie automáticamente ante eventuales fallos, se configura como un servicio de `systemd`.
+### Prerrequisitos
+* Java Development Kit (JDK 11 o superior instalado).
 
-1. Crear el archivo de servicio `/etc/systemd/system/mq2_sensor.service`:
+### Compilar el Proyecto
+Desde la terminal en el directorio raíz del proyecto:
+javac *.java
 
-```ini
+### Ejecutar la Aplicación Principal (Gráfica y Muestreo)
+java App
+
+### Ejecutar las Pruebas Automatizadas
+java PruebasSensor
+
+---
+
+## 6. Despliegue como Servicio del Sistema (Fase 5)
+
+Para garantizar el autoarranque al encender la Raspberry Pi y el reinicio automático ante fallos inesperados, se crea el servicio `systemd`.
+
+1. **Crear el archivo de servicio:** `/etc/systemd/system/mq2_sensor.service`
+
 [Unit]
-Description=Servicio de Monitoreo y Simulación de Sensor MQ-2
+Description=Servicio de Monitoreo del Sensor MQ-2
 After=network.target
 
 [Service]
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/simulador-sensor
-ExecStart=/usr/bin/java -cp /home/pi/simulador-sensor/bin App
+ExecStart=/usr/bin/java -cp /home/pi/simulador-sensor App
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-```
 
-2. Activar y arrancar el servicio en el sistema:
-
-```bash
+2. **Habilitar e Iniciar el Servicio:**
 sudo systemctl daemon-reload
 sudo systemctl enable mq2_sensor.service
 sudo systemctl start mq2_sensor.service
-```
 
-3. Verificar el estado del servicio:
-
-```bash
+3. **Verificar el Estado del Servicio:**
 sudo systemctl status mq2_sensor.service
-```
-
----
-
-## 7. Estructura del Archivo de Registro (`registro_mq2.csv`)
-
-El programa genera automáticamente un archivo `.csv` donde persiste de manera continua las lecturas:
-
-```csv
-Timestamp,Valor_PPM,Estado
-1700000000000,0.0,PRECALENTANDO
-1700000001000,0.0,PRECALENTANDO
-1700000011000,20.15,OK
-1700000012000,20.18,OK
-```
-
----
-
-## 8. Decisiones de Diseño y Robustez
-* **Tolerancia a Fallos:** La excepción por precalentamiento (`RuntimeException`) es capturada dentro del bucle principal de muestreo, impidiendo la caída prematura del programa y registrando el estado en el CSV.
-* **Control de Memoria:** La interfaz gráfica maneja una cola acotada de muestras ($N=20$), garantizando un consumo de memoria RAM constante a lo largo del tiempo.
