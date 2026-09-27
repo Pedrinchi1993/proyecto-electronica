@@ -57,6 +57,8 @@ javac *.java
 ### Ejecutar la Aplicación Principal (Gráfica y Muestreo)
 java App
 
+![Esquema de Conexión Proteus](PRUEBA.png)
+
 ### Ejecutar las Pruebas Automatizadas
 java PruebasSensor
 
