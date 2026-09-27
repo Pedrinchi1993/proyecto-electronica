@@ -36,7 +36,6 @@ public class App extends JFrame {
         lblValorActual = new JLabel("Valor: -- PPM", SwingConstants.CENTER);
         lblValorActual.setFont(new Font("SansSerif", Font.BOLD, 18));
         lblValorActual.setForeground(new Color(30, 41, 59));
-
         lblEstadoActual = new JLabel("Estado: INICIANDO", SwingConstants.CENTER);
         lblEstadoActual.setFont(new Font("SansSerif", Font.BOLD, 16));
         lblEstadoActual.setForeground(Color.GRAY);
